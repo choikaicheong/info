@@ -145,10 +145,34 @@
         }, Math.random()*4000);
     }
 
+    function process_tube_line(data) {
+        for(const status of data["lineStatuses"]) {
+            if(status["statusSeverityDescription"] != "Good Service") {
+                text = "<b>" + data["name"] + "</b>: ";
+                text += status["statusSeverityDescription"] + ". ";
+                text += status["reason"];
+
+                let new_status = document.createElement("div");
+                new_status.innerHTML = text;
+                document.getElementById("tube_status").appendChild(new_status);
+            }
+        }        
+    }
+
+    function populate_tube_status() {
+        fetch("https://api.tfl.gov.uk/line/mode/tube/status")
+            .then((response) => response.json())
+            .then((data) => {
+                clean_table("tube_status");
+                data.map(process_tube_line);
+            })
+    }
+
     for(let station in concerned_route) {
         start_concern(station);
     }
-    
+
+    populate_tube_status();
 
 </script>
 
@@ -221,6 +245,12 @@
         <tbody>
         </tbody>
     </table>
+    <br>
+    <a href="https://www.tfl.gov.uk" target="_blank">Tube</a>
+    <button onclick="populate_tube_status()">Refresh</button>
+    <div id="tube_status">
+    </div>
+
 </div>
 
 </body>
