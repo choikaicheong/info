@@ -7,6 +7,7 @@
         border: 1px solid black;
     }
 </style>
+<meta http-equiv="refresh" content="300">
 </head>
 <body>
 
@@ -128,6 +129,9 @@
                     tb[0].id = my_station;
                     start_concern(my_station);
                 }
+                else {
+                    get_station_info(my_station);
+                }
             })
 
     }
@@ -149,10 +153,10 @@
 </script>
 
 <div>
-    <iframe src="https://weather.metoffice.gov.uk/forecast/gcpvj852s#" title="weather" height="1200" width="800" style="margin-top: -150px;"></iframe>
+    <iframe src="https://weather.metoffice.gov.uk/forecast/gcpvj852s#" title="weather" height="1200" width="800" style="-webkit-transform: scale(0.85);margin-top: -220px;margin-left: -50px;"></iframe>
 </div>
 
-<div style="position:absolute;left:830px;top:0">
+<div style="position:absolute;left:720px;top:0">
     <p>To North</p>
     <table>
         <thead>
