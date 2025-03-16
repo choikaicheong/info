@@ -145,22 +145,36 @@
         }, Math.random()*4000);
     }
 
+    function expand_showmore(id) {
+        button = document.getElementById(id);
+        sub_text = button.getAttribute("textvalue");
+        button.remove();
+        document.getElementById(id+"description").innerHTML += sub_text;
+    }
+
     function process_tube_line(data) {
         for(const status of data["lineStatuses"]) {
             if(status["statusSeverityDescription"] != "Good Service") {
                 text = "<b>" + data["name"] + "</b>: ";
                 text += status["statusSeverityDescription"] + ". ";
-                text += status["reason"];
 
                 let new_status = document.createElement("div");
+                new_status.id = data["name"] + status["id"] + status["statusSeverity"] + "description";
                 new_status.innerHTML = text;
                 document.getElementById("tube_status").appendChild(new_status);
+
+                showmore = document.createElement("button");
+                showmore.id = data["name"] + status["id"] + status["statusSeverity"];
+                showmore.setAttribute("textvalue", status["reason"])
+                showmore.setAttribute("onclick", "expand_showmore('" + showmore.id + "')");
+                showmore.innerHTML = "Show More";
+                new_status.appendChild(showmore);
             }
         }        
     }
 
     function populate_tube_status() {
-        fetch("https://api.tfl.gov.uk/line/mode/tube/status")
+        fetch("https://api.tfl.gov.uk/line/mode/tube,overground,dlr/status")
             .then((response) => response.json())
             .then((data) => {
                 clean_table("tube_status");
