@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Info</title>
+<style>
+    table, th, td {
+        border: 1px solid black;
+    }
+</style>
+</head>
+<body>
+
+<script>
+    l = [];
+    interval_handles = {};
+    concerned_route = {
+        "490015140N":"all",
+        "490015140S":"all",
+        "490012693N1":["176"]
+    };
+
+    stations_nearby = {
+        "NW": ["490015140N", "490012693N1", "490008473M", "490008473N"], 
+        "SE": ["490015140S", "490012693S2", "490012693D"]
+    }
+
+
+    function tommss(sec_num) {
+        if(sec_num < 0)
+            return "-" + tommss(-sec_num);
+        let minutes = Math.floor(sec_num / 60);
+        let seconds = Math.floor(sec_num - minutes * 60);
+
+        return minutes + "m" + seconds + "s";
+    }
+
+    function clean_table(station) {
+        children = [];
+        tb = document.getElementById(station);
+        while(!!tb.firstElementChild) {
+            children.push(tb.firstElementChild);
+            tb.removeChild(tb.firstElementChild);
+        }
+        return children;
+    }
+
+    function update_bus(bus) {
+        if(false) {
+            l.push(bus);
+        }
+        let station = bus["naptanId"];
+        let reg_plate = bus["vehicleId"];
+        let route = bus["lineName"];
+
+        if(concerned_route[station] != "all" && !concerned_route[station].includes(route)){
+            return;
+        }
+
+        let tts = bus["timeToStation"];
+        let freshness = (Date.parse(bus["timestamp"]) - Date.now())/1000;
+        let real_estimation = tts + freshness;
+
+        route_cell = document.createElement("td");
+        route_cell.innerHTML = route;
+        reg_plate_cell = document.createElement("td");
+        reg_plate_cell.innerHTML = reg_plate;
+        tts_cell = document.createElement("td");
+        tts_cell.innerHTML = tommss(tts);
+        freshness_cell = document.createElement("td");
+        freshness_cell.innerHTML = tommss(freshness);
+        real_estimation_cell = document.createElement("td");
+        real_estimation_cell.innerHTML = tommss(real_estimation);
+
+        row = document.createElement("tr");
+        row.id = station+reg_plate;
+        row.setAttribute("in_seconds", real_estimation);
+        row.appendChild(route_cell);
+        row.appendChild(reg_plate_cell);
+        row.appendChild(tts_cell);
+        row.appendChild(freshness_cell);
+        row.appendChild(real_estimation_cell);
+
+        tb = document.getElementById(station);
+        tb.appendChild(row);
+    }
+
+    function sort_table(station) {
+        children = clean_table(station);
+        children.sort(function(a,b){return a.getAttribute("in_seconds")-b.getAttribute("in_seconds")});
+        tb = document.getElementById(station);
+        children.map(function(child){tb.appendChild(child)});
+    }
+
+    function get_station_info(station) {
+        response_promise = fetch("https://api.tfl.gov.uk/StopPoint/"+station+"/arrivals")
+                    .then((response) => response.json())
+                    .then((data) => {
+                        clean_table(data[0]["naptanId"]);
+                        data.map(update_bus);
+                        sort_table(data[0]["naptanId"]);
+                    });
+    }
+
+    function add_concern() {
+        const form = document.getElementById("form");
+        const formData_raw = new FormData(form);
+        let formData = {}
+
+        for(const [k,v] of formData_raw.entries()) {
+            formData[k] = v;
+        }
+
+        fetch("https://api.tfl.gov.uk/line/"+formData["bus_route"]+"/stoppoints")
+            .then((response) => response.json())
+            .then((data) => {
+                my_station = data.filter((datum) => stations_nearby[formData["direction"]].includes(datum["naptanId"]))[0]["naptanId"];
+                if(formData["show_only"])
+                {
+                    if(!(my_station in concerned_route))
+                        concerned_route[my_station] = [];
+                    if(concerned_route[my_station]!="all")
+                        concerned_route[my_station].push(formData["bus_route"]);
+                }
+                else
+                    concerned_route[my_station] = "all";
+                if(!(my_station in interval_handles)) {
+                    tb = document.getElementById("temp_query").getElementsByTagName("tbody");
+                    tb[0].id = my_station;
+                    start_concern(my_station);
+                }
+            })
+
+    }
+
+    function start_concern(station) {
+        get_station_info(station);
+        setTimeout(function(){
+            interval_handles[station] = setInterval(function() {
+                setTimeout(function(){get_station_info(station)},Math.random()*5000);
+            }, 8000)
+        }, Math.random()*4000);
+    }
+
+    for(let station in concerned_route) {
+        start_concern(station);
+    }
+    
+
+</script>
+
+<div>
+    <iframe src="https://weather.metoffice.gov.uk/forecast/gcpvj852s#" title="weather" height="1200" width="800" style="margin-top: -150px;"></iframe>
+</div>
+
+<div style="position:absolute;left:830px;top:0">
+    <p>To North</p>
+    <table>
+        <thead>
+            <tr>
+                <th width="70">Route</th>
+                <th width="100">Reg Plate</th>
+                <th>Time to Station</th>
+                <th>Freshness</th>
+                <th>Real Estimation</th>
+            </tr>
+        </thead>
+        <tbody id="490015140N">
+        </tbody>
+    </table>
+    <p>To South</p>
+    <table>
+        <thead>
+            <tr>
+                <th width="70">Route</th>
+                <th width="100">Reg Plate</th>
+                <th>Time to Station</th>
+                <th>Freshness</th>
+                <th>Real Estimation</th>
+            </tr>
+        </thead>
+        <tbody id="490015140S">
+        </tbody>
+    </table>
+    <p>To North West</p>
+    <table>
+        <thead>
+            <tr>
+                <th width="70">Route</th>
+                <th width="100">Reg Plate</th>
+                <th>Time to Station</th>
+                <th>Freshness</th>
+                <th>Real Estimation</th>
+            </tr>
+        </thead>
+        <tbody id="490012693N1">
+        </tbody>
+    </table>
+    <br>
+    <form onsubmit="add_concern();return false" method="post" action="" id="form">
+        <input type="text" id="bus_route" name="bus_route">
+        <input type="radio" name="direction" value="NW" checked="checked">NW
+        <input type="radio" name="direction" value="SE">SE
+        <input type="checkbox" id="show_only", name="show_only", value="show_only" checked><label for="show_only">Show Only</label>
+        <input type="submit" value="submit">
+    </form>
+    <p>Answer</p>
+    <table id="temp_query">
+        <thead>
+            <tr>
+                <th width="70">Route</th>
+                <th width="100">Reg Plate</th>
+                <th>Time to Station</th>
+                <th>Freshness</th>
+                <th>Real Estimation</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>
